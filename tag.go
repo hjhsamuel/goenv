@@ -10,6 +10,8 @@ import (
 const (
 	TagSplitChar = ";"
 
+	TagSliceSplitChar = ","
+
 	TagName = "name"
 
 	TagValueChar  = ":"

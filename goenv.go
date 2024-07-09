@@ -2,10 +2,12 @@ package goenv
 
 import (
 	"encoding"
+	"fmt"
 	"github.com/pkg/errors"
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -68,6 +70,9 @@ func (e *EnvParser) parse(t reflect.Type, v reflect.Value, tag *Tag) error {
 				}
 			}
 		}
+	case reflect.Slice:
+		fmt.Println(t.Elem().String(), v.String())
+		return e.slice(t, v, tag)
 	default:
 		if tag.Name == e.prefix {
 			return nil
@@ -128,6 +133,48 @@ func (e *EnvParser) getValue(v reflect.Value, tag *Tag) string {
 		}
 	}
 	return val
+}
+
+func (e *EnvParser) slice(t reflect.Type, v reflect.Value, tag *Tag) error {
+	value := e.getValue(v, tag)
+	l := strings.Split(value, TagSliceSplitChar)
+
+	te := t.Elem()
+	if te.Kind() == reflect.Ptr {
+		te = te.Elem()
+	}
+
+	if _, ok := reflect.New(te).Interface().(encoding.TextUnmarshaler); ok {
+		elemType := v.Type().Elem()
+		result := reflect.MakeSlice(reflect.SliceOf(elemType), len(l), len(l))
+		for i, data := range l {
+			indexElem := result.Index(i)
+			if indexElem.Kind() == reflect.Ptr {
+				indexElem = reflect.New(elemType.Elem())
+			} else {
+				indexElem = indexElem.Addr()
+			}
+			if f, ok := indexElem.Interface().(encoding.TextUnmarshaler); ok {
+				if err := f.UnmarshalText([]byte(data)); err != nil {
+					return err
+				}
+			}
+			if indexElem.Kind() == reflect.Ptr {
+				result.Index(i).Set(indexElem)
+			}
+		}
+		v.Set(result)
+	} else {
+		fmt.Println("system type: ", t.Elem(), t)
+		result := reflect.MakeSlice(t, len(l), len(l))
+		for i, data := range l {
+			if err := e.parse(t.Elem(), result.Index(i), &Tag{Default: data}); err != nil {
+				return err
+			}
+		}
+		v.Set(result)
+	}
+	return nil
 }
 
 func (e *EnvParser) setUnmarshal(v reflect.Value, tag *Tag) (bool, error) {

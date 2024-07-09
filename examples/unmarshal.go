@@ -44,7 +44,8 @@ func (n *Node) UnmarshalText(text []byte) error {
 type Config struct {
 	Version int           `env:"VERSION;required"`
 	Timeout time.Duration `env:"TIMEOUT;required;gte: 5;lte: 10"`
-	Peers   *Node         `env:"PEERS;required"`
+	Peers   []*Node       `env:"PEERS;required"`
+	IDs     []int         `env:"IDS"`
 }
 
 func main() {
@@ -54,7 +55,10 @@ func main() {
 	if err := os.Setenv("ENV_TIMEOUT", "5"); err != nil {
 		panic(err)
 	}
-	if err := os.Setenv("ENV_PEERS", "1=127.0.0.1:8080"); err != nil {
+	if err := os.Setenv("ENV_PEERS", "1=127.0.0.1:8080,2=127.0.0.1:8081"); err != nil {
+		panic(err)
+	}
+	if err := os.Setenv("ENV_IDS", "1,2,3"); err != nil {
 		panic(err)
 	}
 
@@ -65,5 +69,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("%#v\n", *c)
-	fmt.Println(c.Peers)
+	for _, info := range c.Peers {
+		fmt.Println(info.ID, info.Addr.String())
+	}
 }
