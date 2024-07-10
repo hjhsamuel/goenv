@@ -89,3 +89,46 @@ if err := parser.Start(&c); err != nil {
     log.Fatal(err)
 }
 ```
+
+## Custom Unmarshal
+
+You can use your own function to format fields by implement the `UnmarshalText` interface
+
+```go
+type Node struct {
+	ID   int
+	Addr net.Addr
+}
+
+func (n *Node) UnmarshalText(text []byte) error {
+	l := bytes.Split(text, []byte("="))
+	if len(l) != 2 {
+		return errors.New("invalid node format")
+	}
+
+	if id, err := strconv.Atoi(string(l[0])); err != nil {
+		return err
+	} else {
+		n.ID = id
+	}
+
+	if host, port, err := net.SplitHostPort(string(l[1])); err != nil {
+		return err
+	} else {
+		iport, err := strconv.Atoi(port)
+		if err != nil {
+			return err
+		}
+		n.Addr = &net.TCPAddr{IP: net.ParseIP(host), Port: iport}
+	}
+	return nil
+}
+
+type Config struct {
+	Node Node `env:"NODE"`
+}
+```
+
+```shell
+ENV_NODE="1=127.0.0.1:8000"
+```
