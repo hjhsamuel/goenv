@@ -208,3 +208,27 @@ func Test_Required(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func Test_Name(t *testing.T) {
+	type InnerConfig struct {
+		Name string `env:"name: NAME"`
+		Age  int    `env:"AGE"`
+	}
+
+	if err := os.Setenv("ENV_NAME", "aaa"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv("ENV_AGE", "18"); err != nil {
+		t.Fatal(err)
+	}
+
+	c := &InnerConfig{}
+	parser := NewEnvParser()
+	if err := parser.Start(&c); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Name != "aaa" || c.Age != 18 {
+		t.Fatal("failed")
+	}
+}
