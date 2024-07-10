@@ -2,7 +2,6 @@ package goenv
 
 import (
 	"encoding"
-	"fmt"
 	"github.com/pkg/errors"
 	"os"
 	"reflect"
@@ -71,8 +70,19 @@ func (e *EnvParser) parse(t reflect.Type, v reflect.Value, tag *Tag) error {
 			}
 		}
 	case reflect.Slice:
-		fmt.Println(t.Elem().String(), v.String())
-		return e.slice(t, v, tag)
+		if err := e.setSlice(t, v, tag); err != nil {
+			return err
+		}
+		if tag.Required && v.IsZero() {
+			return errors.Errorf("slice %s is required", tag.Name)
+		}
+	case reflect.Map:
+		if err := e.setMap(t, v, tag); err != nil {
+			return err
+		}
+		if tag.Required && v.IsZero() {
+			return errors.Errorf("map %s is required", tag.Name)
+		}
 	default:
 		if tag.Name == e.prefix {
 			return nil
@@ -130,13 +140,23 @@ func (e *EnvParser) getValue(v reflect.Value, tag *Tag) string {
 	if val = os.Getenv(tag.Name); val == "" {
 		if v.IsZero() {
 			val = tag.Default
+		} else {
+			if v.Kind() == reflect.Ptr {
+				v = v.Elem()
+			}
+			if v.Kind() == reflect.Struct {
+				val = tag.Default
+			}
 		}
 	}
 	return val
 }
 
-func (e *EnvParser) slice(t reflect.Type, v reflect.Value, tag *Tag) error {
+func (e *EnvParser) setSlice(t reflect.Type, v reflect.Value, tag *Tag) error {
 	value := e.getValue(v, tag)
+	if value == "" {
+		return nil
+	}
 	l := strings.Split(value, TagSliceSplitChar)
 
 	te := t.Elem()
@@ -155,7 +175,7 @@ func (e *EnvParser) slice(t reflect.Type, v reflect.Value, tag *Tag) error {
 				indexElem = indexElem.Addr()
 			}
 			if f, ok := indexElem.Interface().(encoding.TextUnmarshaler); ok {
-				if err := f.UnmarshalText([]byte(data)); err != nil {
+				if err := f.UnmarshalText([]byte(strings.TrimSpace(data))); err != nil {
 					return err
 				}
 			}
@@ -165,15 +185,43 @@ func (e *EnvParser) slice(t reflect.Type, v reflect.Value, tag *Tag) error {
 		}
 		v.Set(result)
 	} else {
-		fmt.Println("system type: ", t.Elem(), t)
 		result := reflect.MakeSlice(t, len(l), len(l))
 		for i, data := range l {
-			if err := e.parse(t.Elem(), result.Index(i), &Tag{Default: data}); err != nil {
+			if err := e.parse(t.Elem(), result.Index(i), &Tag{Default: strings.TrimSpace(data)}); err != nil {
 				return err
 			}
 		}
 		v.Set(result)
 	}
+	return nil
+}
+
+func (e *EnvParser) setMap(t reflect.Type, v reflect.Value, tag *Tag) error {
+	value := e.getValue(v, tag)
+	if value == "" {
+		return nil
+	}
+	kv := strings.Split(value, TagMapSplitChar)
+
+	result := reflect.MakeMapWithSize(t, len(kv))
+	for _, info := range kv {
+		index := strings.Index(info, TagValueChar)
+		if index == -1 {
+			return errors.Errorf("value %s invalid", info)
+		}
+		var (
+			keyResult = reflect.New(t.Key()).Elem()
+			valResult = reflect.New(t.Elem()).Elem()
+		)
+		if err := e.parse(t.Key(), keyResult, &Tag{Default: strings.TrimSpace(info[:index])}); err != nil {
+			return err
+		}
+		if err := e.parse(t.Elem(), valResult, &Tag{Default: strings.TrimSpace(info[index+1:])}); err != nil {
+			return err
+		}
+		result.SetMapIndex(keyResult, valResult)
+	}
+	v.Set(result)
 	return nil
 }
 

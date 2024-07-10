@@ -11,6 +11,7 @@ const (
 	TagSplitChar = ";"
 
 	TagSliceSplitChar = ","
+	TagMapSplitChar   = "|"
 
 	TagName = "name"
 
@@ -92,12 +93,12 @@ func ParseTag(info string) (*Tag, error) {
 		case TagRequiredSig:
 			res.Required = true
 		default:
-			l := strings.Split(val, TagValueChar)
-			if len(l) != 2 {
-				res.Name = l[0]
+			index := strings.Index(val, TagValueChar)
+			if index == -1 {
+				res.Name = val
 			} else {
-				tagVal := strings.TrimSpace(l[1])
-				switch l[0] {
+				tagVal := strings.TrimSpace(val[index+1:])
+				switch val[:index] {
 				case TagName:
 					res.Name = tagVal
 				case TagDefaultSig:
@@ -106,11 +107,31 @@ func ParseTag(info string) (*Tag, error) {
 					if res.Number == nil {
 						res.Number = &NumberTag{}
 					}
-					if err := res.Number.set(l[0], tagVal); err != nil {
+					if err := res.Number.set(val[:index], tagVal); err != nil {
 						return nil, err
 					}
 				}
 			}
+
+			//l := strings.Split(val, TagValueChar)
+			//if len(l) < 2 {
+			//	res.Name = l[0]
+			//} else {
+			//	tagVal := strings.TrimSpace(l[1])
+			//	switch l[0] {
+			//	case TagName:
+			//		res.Name = tagVal
+			//	case TagDefaultSig:
+			//		res.Default = tagVal
+			//	case TagNumberLessThan, TagNumberLessOrEqual, TagNumberGreaterThan, TagNumberGreaterOrEqual:
+			//		if res.Number == nil {
+			//			res.Number = &NumberTag{}
+			//		}
+			//		if err := res.Number.set(l[0], tagVal); err != nil {
+			//			return nil, err
+			//		}
+			//	}
+			//}
 		}
 	}
 	return res, nil
