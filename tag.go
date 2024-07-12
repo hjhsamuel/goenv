@@ -20,6 +20,7 @@ const (
 
 	TagSkipSig     = "-"
 	TagRequiredSig = "required"
+	TagInline      = "inline"
 )
 
 type Tag struct {
@@ -27,6 +28,7 @@ type Tag struct {
 	Default  string
 	Required bool
 	Number   *NumberTag
+	Inline   bool
 }
 
 // number
@@ -92,6 +94,8 @@ func ParseTag(info string) (*Tag, error) {
 			continue
 		case TagRequiredSig:
 			res.Required = true
+		case TagInline:
+			res.Inline = true
 		default:
 			index := strings.Index(val, TagValueChar)
 			if index == -1 {
