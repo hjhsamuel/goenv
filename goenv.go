@@ -57,15 +57,24 @@ func (e *EnvParser) parse(t reflect.Type, v reflect.Value, tag *Tag) error {
 				if err != nil {
 					return err
 				}
-				if tagInfo == nil || tagInfo.Name == "" {
+				if tagInfo == nil {
 					continue
 				}
-				if tag != nil {
-					tagInfo.Name = tag.Name + e.splitChar + tagInfo.Name
-				}
-				err = e.parse(t.Field(i).Type, v.Field(i), tagInfo)
-				if err != nil {
-					return err
+				if tagInfo.Inline {
+					err = e.parse(t.Field(i).Type, v.Field(i), tag)
+					if err != nil {
+						return err
+					}
+				} else if tagInfo.Name == "" {
+					continue
+				} else {
+					if tag != nil {
+						tagInfo.Name = tag.Name + e.splitChar + tagInfo.Name
+					}
+					err = e.parse(t.Field(i).Type, v.Field(i), tagInfo)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}

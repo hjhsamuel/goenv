@@ -40,17 +40,22 @@ func (n *Node) UnmarshalText(text []byte) error {
 }
 
 type Config struct {
-	ProjectName string         `env:"PROJNAME;required"`
-	ProjectID   int64          `env:"PROJID;default:1"`
-	Version     int            `env:"VERSION"`
-	VerPtr      *int           `env:"VERSION"`
-	Timeout     time.Duration  `env:"TIMEOUT;gte: 5;lte: 10"`
-	Peers       []*Node        `env:"PEERS;required"`
-	IDs         []int          `env:"IDS;default: 1,2,3"`
-	IDMap       map[int]string `env:"IDMAP"`
-	PeersMap    map[int]*Node  `env:"PEERSMAP"`
-	Server      *ServerConfig  `env:"SERVER"`
-	Log         LogConfig      `env:"LOG"`
+	InlineConfig `env:"inline"`
+	ProjectName  string         `env:"PROJNAME;required"`
+	ProjectID    int64          `env:"PROJID;default:1"`
+	Version      int            `env:"VERSION"`
+	VerPtr       *int           `env:"VERSION"`
+	Timeout      time.Duration  `env:"TIMEOUT;gte: 5;lte: 10"`
+	Peers        []*Node        `env:"PEERS;required"`
+	IDs          []int          `env:"IDS;default: 1,2,3"`
+	IDMap        map[int]string `env:"IDMAP"`
+	PeersMap     map[int]*Node  `env:"PEERSMAP"`
+	Server       *ServerConfig  `env:"SERVER"`
+	Log          LogConfig      `env:"LOG"`
+}
+
+type InlineConfig struct {
+	Node int `env:"NODE"`
 }
 
 type ServerConfig struct {
@@ -65,6 +70,9 @@ type LogConfig struct {
 }
 
 func TestNewEnvParser(t *testing.T) {
+	if err := os.Setenv("ENV_NODE", "1"); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Setenv("ENV_PROJNAME", "goenv"); err != nil {
 		t.Fatal(err)
 	}
@@ -96,10 +104,13 @@ func TestNewEnvParser(t *testing.T) {
 		IDs: []int{5, 6, 7},
 	}
 	parser := NewEnvParser()
-	if err := parser.Start(&c); err != nil {
+	if err := parser.Start(c); err != nil {
 		t.Fatal(err)
 	}
 
+	if c.Node != 1 {
+		t.Fatal("node")
+	}
 	if c.ProjectName != "goenv" {
 		t.Fatal("ProjectName")
 	}
