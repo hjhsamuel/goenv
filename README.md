@@ -27,6 +27,7 @@ Support tags:
 
 - `required`
 - `default`
+- `inline`
 - `-`
 - `name`
 - `lt` and `lte`
@@ -48,11 +49,21 @@ type LogConfig struct {
 	Path  *string `env:"PATH"`
 }
 
+type IPAddress struct {
+	IP      string `env:"name:IP"`
+	Gateway string `env:"name:GATEWAY"`
+}
+
+type IPv4 struct {
+	IPAddress   `env:inline`
+}
+
 type Config struct {
 	ProjectName string        `env:"PROJNAME;required"`
 	ProjectID   int64         `env:"PROJID;default:1"`
 	Server      *ServerConfig `env:"SERVER"`
 	Log         LogConfig     `env:"LOG"`
+	Address     IPv4          `env:"name:IPV4"`
 }
 ```
 
