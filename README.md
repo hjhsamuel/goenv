@@ -143,3 +143,8 @@ type Config struct {
 ```shell
 ENV_NODE="1=127.0.0.1:8000"
 ```
+
+
+## Notice
+
+In environment variables, `map` and `slice` are treated as special values. Therefore, when a defined map or slice is nested within other complex data types (such as `struct`, `map`, or `slice`), it may fail to be parsed correctly. In such cases, you need to explicitly implement the `UnmarshalText` interface to handle the mapping yourself.
